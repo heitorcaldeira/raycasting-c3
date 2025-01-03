@@ -26,10 +26,10 @@ char[10][10] map = {
 
 bool running = true;
 
-player::Player p1 = {
+player::Player player = {
   .pos = { 200, 300},
-  .dir = { 1, 0 },
-  .fov = 30,
+  .dir = { -1, 0 },
+  .fov = 45,
 };
 
 player::Player p2 = {
@@ -44,12 +44,12 @@ fn float snap(float x, float dx) {
   return x;
 }
 
-fn void drawLine(Renderer* renderer, Vec2 p1, Vec2 p2) {
+fn void drawLine(Renderer* renderer, Vec2 player, Vec2 p2) {
   sdl::setRenderDrawColor(renderer, 18, 255, 18, 255);
   sdl::renderDrawLineF(
     renderer,
-    p1.x + PLAYER_SIZE * 0.5,
-    p1.y + PLAYER_SIZE * 0.5,
+    player.x + PLAYER_SIZE * 0.5,
+    player.y + PLAYER_SIZE * 0.5,
     p2.x + PLAYER_SIZE * 0.5,
     p2.y + PLAYER_SIZE * 0.5
   );
@@ -63,7 +63,7 @@ fn void drawWalls(Renderer* renderer) {
       if (map[row][col] != 0) {
         sdl::renderFillRectF(
           renderer,
-          &&FRect{ row * (float)CELL_SIZE, col * (float)CELL_SIZE, CELL_SIZE, CELL_SIZE }
+          &&FRect{ row * (float)CELL_SIZE + 1, col * (float)CELL_SIZE + 1, CELL_SIZE - 1, CELL_SIZE - 1 }
         );
       }
     }
@@ -81,12 +81,28 @@ fn void gameLoop(Renderer* renderer) {
     sdl::renderDrawLine(renderer, col * CELL_SIZE, 0, col * CELL_SIZE, HEIGHT);
   }
 
-  p1.draw(renderer);
-  drawLine(renderer, p1.pos, p2.pos);
+  player.draw(renderer);
+  player.drawRay(renderer);
 
   drawWalls(renderer);
 
   sdl::renderPresent(renderer);
+}
+
+fn Vec2 lerpVec2(Vec2 a, Vec2 b, float p) {
+  return addVec2(a, scaleVec2(subVec2(b, a), p));
+}
+
+fn Vec2 scaleVec2(Vec2 a, float p) {
+  return { a.x * p, a.y * p };
+}
+
+fn Vec2 subVec2(Vec2 a, Vec2 b) {
+  return { a.x - b.x, a.y - b.y };
+}
+
+fn Vec2 addVec2(Vec2 a, Vec2 b) {
+  return { a.x + b.x, a.y + b.y };
 }
 
 fn void pollEvents() {
@@ -95,6 +111,16 @@ fn void pollEvents() {
     switch (event.type) {
       case sdl::QUIT:
         running = false;
+        break;
+      case sdl::MOUSEMOTION:
+        float[<2>] cur = player.pos; // 0, 0
+        float[<2>] mouse = { event.button.x, event.button.y };
+        float[<2>] s = cur - { WIDTH, HEIGHT };
+        float p = mouse.x / WIDTH;
+        float pp = mouse.y / HEIGHT;
+        float[<2>] l = lerpVec2(cur, s, p);
+        float[<2>] ll = lerpVec2(cur, s, pp);
+        player.dir = { l.x, ll.y };
         break;
     }
   }
