@@ -1,21 +1,8 @@
 import std::io;
 import std::math;
 import sdl;
-import player;
 
-char[10][10] map = {
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 0, 1, 1, 1, 0, 0, 0, 0, 0, 0 },
-  { 0, 1, 1, 1, 0, 0, 0, 0, 0, 0 },
-  { 0, 1, 1, 1, 0, 0, 0, 0, 1, 0 },
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-};
-
+const CInt MAP_SIZE = 10;
 def Vec2 = float[<2>];
 const CInt WIDTH = 800;
 const CInt HEIGHT = 600;
@@ -23,9 +10,89 @@ const CInt CELL_SIZE = WIDTH / 20;
 const CInt ROWS_COUNT = HEIGHT / CELL_SIZE;
 const CInt COLS_COUNT = WIDTH / CELL_SIZE;
 
+char[MAP_SIZE][MAP_SIZE] map = {
+  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 0, 1, 1, 1, 0, 0, 0, 0, 0, 1 },
+  { 0, 1, 1, 1, 0, 0, 0, 0, 0, 0 },
+  { 0, 1, 1, 1, 0, 0, 0, 0, 1, 0 },
+  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+};
+
 bool running = true;
 
-player::Player player = {
+const CInt PLAYER_SIZE = 8;
+
+struct Player {
+  Vec2 pos;
+  Vec2 dir;
+  float fov;
+}
+
+fn void Player.draw(Player* p, Renderer* renderer) {
+  sdl::setRenderDrawColor(renderer, 18, 255, 18, 255);
+  sdl::renderFillRectF(renderer, &&FRect{ p.pos.x, p.pos.y, PLAYER_SIZE, PLAYER_SIZE });
+}
+
+fn void Player.drawRays(Player* p, Renderer* renderer) {
+  Vec2 ray, offset;
+  float rayAngle, iRay, mapIndex;
+  int maxRays;
+  Vec2 l = p.dir;
+
+  rayAngle = p.fov;
+  maxRays = (int)math::max(COLS_COUNT, ROWS_COUNT);
+
+  sdl::setRenderDrawColor(renderer, 0, 0, 255, 255);
+
+  float tan = math::tan(rayAngle);
+  float aTan = tan != 0 ? -1 / math::tan(rayAngle) : 1.0;
+  for (int r = 0; r < 1; r++) {
+    if (rayAngle > math::PI) {
+      ray.y = (double)((float)math::floor((int)(p.pos.y / CELL_SIZE)) * CELL_SIZE) - 0.0001;
+      ray.x = ((p.pos.y - ray.y) * aTan) + p.pos.x;
+      offset.y = -CELL_SIZE;
+      offset.x = -offset.y * aTan;
+    } 
+
+    if (rayAngle < math::PI) {
+      ray.y = (double)((float)math::floor((int)(p.pos.y / CELL_SIZE)) * CELL_SIZE) + CELL_SIZE - 0.0001;
+      ray.x = math::floor((p.pos.y - ray.y) * aTan + p.pos.x);
+      offset.y = CELL_SIZE;
+      offset.x = -offset.y * aTan;
+    }
+
+    if (rayAngle == math::PI || rayAngle == 0) {
+      ray.x = p.pos.x;
+      ray.y = p.pos.x;
+      iRay = maxRays;
+    }
+
+    while (iRay < maxRays) {
+      ray += offset;
+      iRay += 1;
+    }
+
+    sdl::setRenderDrawColor(renderer, 255, 0, 18, 255);
+    sdl::renderDrawLineF(
+      renderer,
+      p.pos.x + PLAYER_SIZE * 0.5,
+      p.pos.y + PLAYER_SIZE * 0.5,
+      ray.x,
+      ray.y
+    );
+  }
+}
+
+fn float degToRad(float angle) {
+  return ((angle) * math::PI / 180.0);
+}
+
+Player player = {
   .pos = { WIDTH / 3, HEIGHT / 2},
   .dir = { -1, 0 },
   .fov = 0.1,
@@ -34,9 +101,9 @@ player::Player player = {
 fn void drawWalls(Renderer* renderer) {
   sdl::setRenderDrawColor(renderer, 255, 0, 0, 255);
 
-  for (int row = 0; row < 10; row++) {
-    for (int col = 0; col < 10; col++) {
-      if (map[row][col] != 0) {
+  for (int col = 0; col < 10; col++) {
+    for (int row = 0; row < 10; row++) {
+      if (map[col][row] != 0) {
         sdl::renderFillRectF(
           renderer,
           &&FRect{ row * (float)CELL_SIZE + 1, col * (float)CELL_SIZE + 1, CELL_SIZE - 1, CELL_SIZE - 1 }
@@ -58,27 +125,11 @@ fn void gameLoop(Renderer* renderer) {
   }
 
   player.draw(renderer);
-  player.drawRay(renderer);
+  player.drawRays(renderer);
 
   drawWalls(renderer);
 
   sdl::renderPresent(renderer);
-}
-
-fn Vec2 lerpVec2(Vec2 a, Vec2 b, float p) {
-  return addVec2(a, scaleVec2(subVec2(b, a), p));
-}
-
-fn Vec2 scaleVec2(Vec2 a, float p) {
-  return { a.x * p, a.y * p };
-}
-
-fn Vec2 subVec2(Vec2 a, Vec2 b) {
-  return { a.x - b.x, a.y - b.y };
-}
-
-fn Vec2 addVec2(Vec2 a, Vec2 b) {
-  return { a.x + b.x, a.y + b.y };
 }
 
 fn void pollEvents() {
