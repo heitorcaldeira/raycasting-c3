@@ -8,7 +8,7 @@ const CInt PLAYER_SIZE = 8;
 struct Player {
   float[<2>] pos;
   float[<2>] dir;
-  CInt fov;
+  float fov;
 }
 
 fn void Player.draw(Player* p, Renderer* renderer) {
@@ -17,18 +17,15 @@ fn void Player.draw(Player* p, Renderer* renderer) {
 }
 
 fn void Player.drawRay(Player* p, Renderer* renderer) {
-  sdl::setRenderDrawColor(renderer, 0, 255, 18, 255);
-  float angle = degToRad(p.fov);
-  float x = (double)math::cos(angle);
-  float y = (double)math::sin(angle);
-  // how the f*ck can I do that?
-  float[<2>] next = { x, y };
+  sdl::setRenderDrawColor(renderer, 255, 0, 18, 255);
+  float[<2>] l = p.dir;
+
   sdl::renderDrawLineF(
     renderer,
     p.pos.x + PLAYER_SIZE * 0.5,
     p.pos.y + PLAYER_SIZE * 0.5,
-    next.x,
-    next.y
+    p.pos.x + l.x * 5,
+    p.pos.y + l.y * 5
   );
 }
 

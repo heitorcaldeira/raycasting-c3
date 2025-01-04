@@ -28,7 +28,7 @@ bool running = true;
 player::Player player = {
   .pos = { WIDTH / 3, HEIGHT / 2},
   .dir = { -1, 0 },
-  .fov = 90,
+  .fov = 0.1,
 };
 
 fn void drawWalls(Renderer* renderer) {
@@ -91,10 +91,27 @@ fn void pollEvents() {
       case sdl::KEYDOWN:
         sdl::Scancode key = event.key.keysym.scancode;
         if (key == 4) { // A
-          player.fov -= 10;
+          player.fov -= 0.1;
+          if (player.fov < 0) player.fov += math::PI * 2;
+          float x = math::cos(player.fov) * 10;
+          float y = math::sin(player.fov) * 10;
+          player.dir = { x, y };
         }
+
         if (key == 7) { // D
-          player.fov += 10;
+          player.fov += 0.1;
+          if (player.fov > math::PI * 2) player.fov -= math::PI * 2;
+          float x = math::cos(player.fov) * 10;
+          float y = math::sin(player.fov) * 10;
+          player.dir = { x, y };
+        }
+
+        if (key == 26) { // W
+          player.pos += player.dir;
+        }
+
+        if (key == 22) { // S
+          player.pos -= player.dir;
         }
         break;
     }
@@ -106,6 +123,10 @@ fn void main() {
 
   Window* window = sdl::createWindow("Raycasting", 100, 100, WIDTH, HEIGHT, 0);
   Renderer* renderer = sdl::createRenderer(window, -1, 0x00000002 | 0x00000004);
+
+  float x = math::cos(player.fov) * 10;
+  float y = math::sin(player.fov) * 10;
+  player.dir = { x, y };
 
   while (running) {
     sdl::setRenderDrawColor(renderer, 0, 0, 0, 255);
