@@ -3,14 +3,6 @@ import std::math;
 import sdl;
 import player;
 
-def Vec2 = float[<2>];
-const CInt WIDTH = 800;
-const CInt HEIGHT = 600;
-const CInt CELL_SIZE = 40;
-const CInt PLAYER_SIZE = 15;
-const CInt ROWS_COUNT = HEIGHT / CELL_SIZE;
-const CInt COLS_COUNT = WIDTH / CELL_SIZE;
-
 char[10][10] map = {
   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
   { 0, 1, 1, 1, 0, 0, 0, 0, 0, 0 },
@@ -18,42 +10,26 @@ char[10][10] map = {
   { 0, 1, 1, 1, 0, 0, 0, 0, 1, 0 },
   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 0, 0, 0, 0, 0, 0, 1, 1, 1, 0 },
-  { 0, 0, 0, 0, 0, 0, 1, 1, 1, 0 },
-  { 0, 0, 0, 0, 0, 0, 1, 1, 0, 0 },
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 };
+
+def Vec2 = float[<2>];
+const CInt WIDTH = 800;
+const CInt HEIGHT = 600;
+const CInt CELL_SIZE = WIDTH / 20;
+const CInt ROWS_COUNT = HEIGHT / CELL_SIZE;
+const CInt COLS_COUNT = WIDTH / CELL_SIZE;
 
 bool running = true;
 
 player::Player player = {
-  .pos = { 200, 300},
+  .pos = { WIDTH / 3, HEIGHT / 2},
   .dir = { -1, 0 },
-  .fov = 45,
+  .fov = 90,
 };
-
-player::Player p2 = {
-  .pos = { 200, 300},
-  .dir = { 1, 0 },
-  .fov = 30,
-};
-
-fn float snap(float x, float dx) {
-  if (dx > 0) return math::ceil(x);
-  if (dx < 0) return math::floor(x);
-  return x;
-}
-
-fn void drawLine(Renderer* renderer, Vec2 player, Vec2 p2) {
-  sdl::setRenderDrawColor(renderer, 18, 255, 18, 255);
-  sdl::renderDrawLineF(
-    renderer,
-    player.x + PLAYER_SIZE * 0.5,
-    player.y + PLAYER_SIZE * 0.5,
-    p2.x + PLAYER_SIZE * 0.5,
-    p2.y + PLAYER_SIZE * 0.5
-  );
-}
 
 fn void drawWalls(Renderer* renderer) {
   sdl::setRenderDrawColor(renderer, 255, 0, 0, 255);
@@ -112,15 +88,14 @@ fn void pollEvents() {
       case sdl::QUIT:
         running = false;
         break;
-      case sdl::MOUSEMOTION:
-        float[<2>] cur = player.pos; // 0, 0
-        float[<2>] mouse = { event.button.x, event.button.y };
-        float[<2>] s = cur - { WIDTH, HEIGHT };
-        float p = mouse.x / WIDTH;
-        float pp = mouse.y / HEIGHT;
-        float[<2>] l = lerpVec2(cur, s, p);
-        float[<2>] ll = lerpVec2(cur, s, pp);
-        player.dir = { l.x, ll.y };
+      case sdl::KEYDOWN:
+        sdl::Scancode key = event.key.keysym.scancode;
+        if (key == 4) { // A
+          player.fov -= 10;
+        }
+        if (key == 7) { // D
+          player.fov += 10;
+        }
         break;
     }
   }
