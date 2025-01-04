@@ -12,15 +12,15 @@ const CInt COLS_COUNT = WIDTH / CELL_SIZE;
 
 char[MAP_SIZE][MAP_SIZE] map = {
   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 0, 1, 1, 1, 0, 0, 0, 0, 0, 1 },
-  { 0, 1, 1, 1, 0, 0, 0, 0, 0, 0 },
-  { 0, 1, 1, 1, 0, 0, 0, 0, 1, 0 },
   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 };
 
 bool running = true;
@@ -40,14 +40,12 @@ fn void Player.draw(Player* p, Renderer* renderer) {
 
 fn void Player.drawRays(Player* p, Renderer* renderer) {
   Vec2 ray, offset;
-  float rayAngle, iRay, mapIndex;
+  float rayAngle, iRay, mp;
   int maxRays;
   Vec2 l = p.dir;
 
   rayAngle = p.fov;
   maxRays = (int)math::max(COLS_COUNT, ROWS_COUNT);
-
-  sdl::setRenderDrawColor(renderer, 0, 0, 255, 255);
 
   float tan = math::tan(rayAngle);
   float aTan = tan != 0 ? -1 / math::tan(rayAngle) : 1.0;
@@ -60,7 +58,7 @@ fn void Player.drawRays(Player* p, Renderer* renderer) {
     } 
 
     if (rayAngle < math::PI) {
-      ray.y = (double)((float)math::floor((int)(p.pos.y / CELL_SIZE)) * CELL_SIZE) + CELL_SIZE - 0.0001;
+      ray.y = (double)((float)math::floor((int)(p.pos.y / CELL_SIZE)) * CELL_SIZE) + CELL_SIZE;
       ray.x = math::floor((p.pos.y - ray.y) * aTan + p.pos.x);
       offset.y = CELL_SIZE;
       offset.x = -offset.y * aTan;
@@ -73,11 +71,21 @@ fn void Player.drawRays(Player* p, Renderer* renderer) {
     }
 
     while (iRay < maxRays) {
-      ray += offset;
-      iRay += 1;
+      int row = math::abs((int)math::floor(ray.x / CELL_SIZE));
+      int col = math::abs((int)math::floor(ray.y / CELL_SIZE));
+
+      io::printf("%d %d\n", row, col);
+
+      if (row < MAP_SIZE && col < MAP_SIZE && map[col][row] == 1) {
+        iRay = maxRays;
+      } else {
+        ray += offset;
+        iRay += 1;
+      }
     }
 
-    sdl::setRenderDrawColor(renderer, 255, 0, 18, 255);
+    sdl::setRenderDrawColor(renderer, 0, 0, 255, 255);
+
     sdl::renderDrawLineF(
       renderer,
       p.pos.x + PLAYER_SIZE * 0.5,
@@ -124,11 +132,11 @@ fn void gameLoop(Renderer* renderer) {
     sdl::renderDrawLine(renderer, col * CELL_SIZE, 0, col * CELL_SIZE, HEIGHT);
   }
 
-  player.draw(renderer);
-  player.drawRays(renderer);
 
   drawWalls(renderer);
 
+  player.draw(renderer);
+  player.drawRays(renderer);
   sdl::renderPresent(renderer);
 }
 
