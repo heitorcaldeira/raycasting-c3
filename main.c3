@@ -9,17 +9,19 @@ const CInt HEIGHT = 600;
 const CInt CELL_SIZE = WIDTH / 20;
 const CInt ROWS_COUNT = HEIGHT / CELL_SIZE;
 const CInt COLS_COUNT = WIDTH / CELL_SIZE;
+const P2 = math::PI / 2;
+const P3 = 3 * math::PI / 2;
 
 char[MAP_SIZE][MAP_SIZE] map = {
   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 0, 1, 1, 1, 1, 1, 1, 1, 1, 0 },
   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 0, 1, 1, 0, 0, 1, 1, 1, 0, 0 },
+  { 1, 0, 0, 1, 0, 0, 0, 0, 0, 0 },
+  { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
   { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 };
 
@@ -38,18 +40,67 @@ fn void Player.draw(Player* p, Renderer* renderer) {
   sdl::renderFillRectF(renderer, &&FRect{ p.pos.x, p.pos.y, PLAYER_SIZE, PLAYER_SIZE });
 }
 
+fn float distance(Vec2 a, Vec2 b) {
+  return math::sqrt((b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y));
+}
+
 fn void Player.drawRays(Player* p, Renderer* renderer) {
   Vec2 ray, offset;
   float rayAngle, iRay, mp;
   int maxRays;
   Vec2 l = p.dir;
 
-  rayAngle = p.fov;
+  rayAngle = p.fov - degToRad(30);
+  if (rayAngle < 0) rayAngle += math::PI * 2;
+  if (rayAngle > math::PI * 2) rayAngle -= math::PI * 2;
   maxRays = (int)math::max(COLS_COUNT, ROWS_COUNT);
 
-  float tan = math::tan(rayAngle);
-  float aTan = tan != 0 ? -1 / math::tan(rayAngle) : 1.0;
-  for (int r = 0; r < 1; r++) {
+  for (int r = 0; r < 60; r++) {
+    iRay = 0;
+    float distV = 100000000;
+    float vx = p.pos.x;
+    float vy = p.pos.y;
+    float nTan = -math::tan(rayAngle);
+    if (rayAngle > P2 && rayAngle < P3) {
+      ray.x = (double)((float)math::floor((int)(p.pos.x / CELL_SIZE)) * CELL_SIZE) - 0.0001;
+      ray.y = ((p.pos.x - ray.x) * nTan) + p.pos.y;
+      offset.x = -CELL_SIZE;
+      offset.y = -offset.x * nTan;
+    } 
+
+    if (rayAngle < P2 || rayAngle > P3) {
+      ray.x = (double)((float)math::floor((int)(p.pos.x / CELL_SIZE)) * CELL_SIZE) + CELL_SIZE;
+      ray.y = math::floor((p.pos.x - ray.x) * nTan + p.pos.y);
+      offset.x = CELL_SIZE;
+      offset.y = -offset.x * nTan;
+    }
+
+    if (rayAngle == math::PI || rayAngle == 0) {
+      ray.x = p.pos.x;
+      ray.y = p.pos.x;
+      iRay = maxRays;
+    }
+
+    while (iRay < maxRays) {
+      int row = (int)math::floor(ray.x / CELL_SIZE);
+      int col = (int)math::floor(ray.y / CELL_SIZE);
+
+      if (row >= 0 && col >= 0 && row < MAP_SIZE && col < MAP_SIZE && map[col][row] == 1) {
+        vx = ray.x;
+        vy = ray.y;
+        distV = distance(p.pos, { vx, vy });
+        iRay = maxRays;
+      } else {
+        ray += offset;
+        iRay += 1;
+      }
+    }
+
+    float distH = 100000000;
+    float hx = p.pos.x;
+    float hy = p.pos.y;
+    float aTan = -1 / math::tan(rayAngle);
+    iRay = 0;
     if (rayAngle > math::PI) {
       ray.y = (double)((float)math::floor((int)(p.pos.y / CELL_SIZE)) * CELL_SIZE) - 0.0001;
       ray.x = ((p.pos.y - ray.y) * aTan) + p.pos.x;
@@ -71,12 +122,13 @@ fn void Player.drawRays(Player* p, Renderer* renderer) {
     }
 
     while (iRay < maxRays) {
-      int row = math::abs((int)math::floor(ray.x / CELL_SIZE));
-      int col = math::abs((int)math::floor(ray.y / CELL_SIZE));
+      int row = (int)math::floor(ray.x / CELL_SIZE);
+      int col = (int)math::floor(ray.y / CELL_SIZE);
 
-      io::printf("%d %d\n", row, col);
-
-      if (row < MAP_SIZE && col < MAP_SIZE && map[col][row] == 1) {
+      if (row >= 0 && col >= 0 && row < MAP_SIZE && col < MAP_SIZE && map[col][row] == 1) {
+        hx = ray.x;
+        hy = ray.y;
+        distH = distance(p.pos, { hx, hy });
         iRay = maxRays;
       } else {
         ray += offset;
@@ -84,15 +136,26 @@ fn void Player.drawRays(Player* p, Renderer* renderer) {
       }
     }
 
-    sdl::setRenderDrawColor(renderer, 0, 0, 255, 255);
+    if (distV < distH) {
+      ray = { vx, vy };
+    }
+    if (distH < distV) {
+      ray = { hx, hy };
+    }
+
+    sdl::setRenderDrawColor(renderer, 0, 255, 255, 255);
 
     sdl::renderDrawLineF(
-      renderer,
-      p.pos.x + PLAYER_SIZE * 0.5,
-      p.pos.y + PLAYER_SIZE * 0.5,
-      ray.x,
-      ray.y
-    );
+        renderer,
+        p.pos.x + PLAYER_SIZE * 0.5,
+        p.pos.y + PLAYER_SIZE * 0.5,
+        ray.x,
+        ray.y
+        );
+
+    rayAngle += degToRad(1);
+    if (rayAngle < 0) rayAngle += math::PI * 2;
+    if (rayAngle > math::PI * 2) rayAngle -= math::PI * 2;
   }
 }
 
