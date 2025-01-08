@@ -26,6 +26,7 @@ char[MAP_SIZE][MAP_SIZE] map = {
 };
 
 bool running = true;
+Vec2 move = { 0, 0 };
 
 const CInt PLAYER_SIZE = 8;
 
@@ -35,8 +36,11 @@ struct Player {
   float fov;
 }
 
+Vec2 ray, offset;
+
 fn void Player.draw(Player* p, Renderer* renderer) {
   sdl::setRenderDrawColor(renderer, 18, 255, 18, 255);
+  sdl::renderDrawLineF(renderer, p.pos.x + PLAYER_SIZE * 0.5, p.pos.y + PLAYER_SIZE * 0.5, p.pos.x + p.dir.x * 5, p.pos.y + p.dir.y * 5);
   sdl::renderFillRectF(renderer, &&FRect{ p.pos.x, p.pos.y, PLAYER_SIZE, PLAYER_SIZE });
 }
 
@@ -46,8 +50,8 @@ fn float distance(Vec2 a, Vec2 b) {
 
 fn void Player.drawRays(Player* p, Renderer* renderer) {
   sdl::renderSetScale(renderer, 1, 1);
-  Vec2 ray, offset;
-  float rayAngle, iRay, mp, finalDist;
+  float rayAngle, mp, finalDist;
+  int iRay;
   int maxRays;
   Vec2 l = p.dir;
 
@@ -55,16 +59,16 @@ fn void Player.drawRays(Player* p, Renderer* renderer) {
   if (rayAngle < 0) rayAngle += math::PI * 2;
 
   if (rayAngle > math::PI * 2) rayAngle -= math::PI * 2;
-  maxRays = (int)math::max(COLS_COUNT, ROWS_COUNT);
+  maxRays = 10;
 
-  for (int r = 0; r < 100; r++) {
+  for (int r = 0; r < 60; r++) {
     iRay = 0;
     float distV = 100000000;
     float vx = p.pos.x;
     float vy = p.pos.y;
     float nTan = -math::tan(rayAngle);
     if (rayAngle > P2 && rayAngle < P3) {
-      ray.x = (double)((float)math::floor((int)(p.pos.x / CELL_SIZE)) * CELL_SIZE) - 0.0001;
+      ray.x = (double)((float)math::floor((int)(p.pos.x / CELL_SIZE)) * CELL_SIZE) - 0.001;
       ray.y = ((p.pos.x - ray.x) * nTan) + p.pos.y;
       offset.x = -CELL_SIZE;
       offset.y = -offset.x * nTan;
@@ -104,7 +108,7 @@ fn void Player.drawRays(Player* p, Renderer* renderer) {
     float aTan = -1 / math::tan(rayAngle);
     iRay = 0;
     if (rayAngle > math::PI) {
-      ray.y = (double)((float)math::floor((int)(p.pos.y / CELL_SIZE)) * CELL_SIZE) - 0.0001;
+      ray.y = (double)((float)math::floor((int)(p.pos.y / CELL_SIZE)) * CELL_SIZE) - 0.001;
       ray.x = ((p.pos.y - ray.y) * aTan) + p.pos.x;
       offset.y = -CELL_SIZE;
       offset.x = -offset.y * aTan;
@@ -153,26 +157,17 @@ fn void Player.drawRays(Player* p, Renderer* renderer) {
     float ca = p.fov - rayAngle;
     if (ca < 0) ca += math::PI * 2;
     if (ca > math::PI * 2) ca -= math::PI * 2;
-    finalDist = finalDist * math::cos(ca);
     float lineHeigth = (MAP_SIZE * HEIGHT) / finalDist;
     float lineOffset = 300 - lineHeigth / 2;
-    if (lineHeigth > 300) lineHeigth = 300;
 
-    sdl::renderFillRectF(
-        renderer,
-        &&FRect{ (float)r * WIDTH / 100, lineOffset, WIDTH / 100, lineHeigth }
-        );
-    sdl::renderDrawLineF(
-        renderer,
-        (float)r * WIDTH / 100,
-        lineOffset,
-        (float)r * WIDTH / 100,
-        lineHeigth + lineOffset
-        );
 
     rayAngle += degToRad(1);
     if (rayAngle < 0) rayAngle += math::PI * 2;
     if (rayAngle > math::PI * 2) rayAngle -= math::PI * 2;
+    sdl::renderFillRectF(
+        renderer,
+        &&FRect{ (float)r * WIDTH / 60, lineOffset, 3+ WIDTH / 60, lineHeigth }
+        );
   }
 }
 
@@ -217,6 +212,62 @@ fn void gameLoop(Renderer* renderer) {
 
   player.draw(renderer);
   player.drawRays(renderer);
+
+  int xOff = 0;
+  int yOff = 0;
+
+  if (player.dir.x < 0) {
+    xOff = -20;
+  } else {
+    xOff = 20;
+  }
+
+  if (player.dir.y < 0) {
+    yOff = -20;
+  } else {
+    yOff = 20;
+  }
+
+  int iPlayerX = (int)math::floor(player.pos.x / CELL_SIZE);
+  int ipYAddOffset = (int)math::floor((player.pos.y + yOff) / CELL_SIZE);
+  int ipYSubOffset = (int)math::floor((player.pos.y - yOff) / CELL_SIZE);
+  int ipXAddOffset = (int)math::floor((player.pos.x + xOff) / CELL_SIZE);
+  int ipXSubOffset = (int)math::floor((player.pos.x - xOff) / CELL_SIZE);
+
+  if (move.y == 1) {
+    if (map[ipYAddOffset][iPlayerX] == 0) {
+      player.pos += player.dir / 2;
+    }
+
+    if (map[ipYAddOffset][ipXAddOffset] == 0) {
+      player.pos += player.dir / 2;
+    }
+  }
+  if (move.y == -1) {
+    if (map[ipYSubOffset][iPlayerX] == 0) {
+      player.pos -= player.dir / 2;
+    }
+
+    if (map[ipYSubOffset][ipXSubOffset] == 0) {
+      player.pos -= player.dir / 2;
+    }
+  }
+  if (move.x == 1) {
+    player.fov += 0.05;
+    if (player.fov > math::PI * 2) player.fov -= math::PI * 2;
+    float x = math::cos(player.fov) * 10;
+    float y = math::sin(player.fov) * 10;
+    player.dir = { x, y };
+  }
+
+  if (move.x == -1) {
+    player.fov -= 0.05;
+    if (player.fov < 0) player.fov += math::PI * 2;
+    float x = math::cos(player.fov) * 10;
+    float y = math::sin(player.fov) * 10;
+    player.dir = { x, y };
+  }
+
   sdl::renderPresent(renderer);
 }
 
@@ -227,30 +278,24 @@ fn void pollEvents() {
       case sdl::QUIT:
         running = false;
         break;
+      case sdl::KEYUP:
+        move = { 0, 0 };
       case sdl::KEYDOWN:
         sdl::Scancode key = event.key.keysym.scancode;
         if (key == 4) { // A
-          player.fov -= 0.1;
-          if (player.fov < 0) player.fov += math::PI * 2;
-          float x = math::cos(player.fov) * 10;
-          float y = math::sin(player.fov) * 10;
-          player.dir = { x, y };
+          move = { -1, 0 };
         }
 
         if (key == 7) { // D
-          player.fov += 0.1;
-          if (player.fov > math::PI * 2) player.fov -= math::PI * 2;
-          float x = math::cos(player.fov) * 10;
-          float y = math::sin(player.fov) * 10;
-          player.dir = { x, y };
+          move = { 1, 0 };
         }
 
         if (key == 26) { // W
-          player.pos += player.dir;
+          move = { 0, 1 };
         }
 
         if (key == 22) { // S
-          player.pos -= player.dir;
+          move = { 0, -1 };
         }
         break;
     }
