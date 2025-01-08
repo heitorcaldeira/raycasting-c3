@@ -13,16 +13,16 @@ const P2 = math::PI / 2;
 const P3 = 3 * math::PI / 2;
 
 char[MAP_SIZE][MAP_SIZE] map = {
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 0, 1, 1, 1, 1, 1, 1, 1, 1, 0 },
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 0, 1, 1, 0, 0, 1, 1, 1, 0, 0 },
-  { 1, 0, 0, 1, 0, 0, 0, 0, 0, 0 },
-  { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-  { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+  { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+  { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+  { 1, 1, 1, 0, 0, 1, 1, 1, 0, 1 },
+  { 1, 0, 0, 1, 0, 0, 0, 0, 0, 1 },
+  { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+  { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+  { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+  { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+  { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
 };
 
 bool running = true;
@@ -46,12 +46,13 @@ fn float distance(Vec2 a, Vec2 b) {
 
 fn void Player.drawRays(Player* p, Renderer* renderer) {
   Vec2 ray, offset;
-  float rayAngle, iRay, mp;
+  float rayAngle, iRay, mp, finalDist;
   int maxRays;
   Vec2 l = p.dir;
 
-  rayAngle = p.fov - degToRad(30);
+  rayAngle = p.fov - degToRad(15);
   if (rayAngle < 0) rayAngle += math::PI * 2;
+
   if (rayAngle > math::PI * 2) rayAngle -= math::PI * 2;
   maxRays = (int)math::max(COLS_COUNT, ROWS_COUNT);
 
@@ -138,19 +139,30 @@ fn void Player.drawRays(Player* p, Renderer* renderer) {
 
     if (distV < distH) {
       ray = { vx, vy };
+      finalDist = distV;
+      sdl::setRenderDrawColor(renderer, 50, 0, 0, 255);
     }
     if (distH < distV) {
       ray = { hx, hy };
+      finalDist = distH;
+      sdl::setRenderDrawColor(renderer, 255, 0, 0, 255);
     }
 
-    sdl::setRenderDrawColor(renderer, 0, 255, 255, 255);
+    if (finalDist == 0) finalDist = 0.0001;
+    float ca = p.fov - rayAngle;
+    if (ca < 0) ca += math::PI * 2;
+    if (ca > math::PI * 2) ca -= math::PI * 2;
+    finalDist = finalDist * math::cos(ca);
+    float lineHeigth = (MAP_SIZE * 800) / finalDist;
+    float lineOffset = 300 - lineHeigth / 2;
+    if (lineHeigth > 300) lineHeigth = 300;
 
     sdl::renderDrawLineF(
         renderer,
-        p.pos.x + PLAYER_SIZE * 0.5,
-        p.pos.y + PLAYER_SIZE * 0.5,
-        ray.x,
-        ray.y
+        (float)r * 2 + 400,
+        lineOffset,
+        (float)r * 2 + 400,
+        lineHeigth + lineOffset
         );
 
     rayAngle += degToRad(1);
@@ -194,7 +206,6 @@ fn void gameLoop(Renderer* renderer) {
   for (int col = 0; col <= COLS_COUNT; col++) {
     sdl::renderDrawLine(renderer, col * CELL_SIZE, 0, col * CELL_SIZE, HEIGHT);
   }
-
 
   drawWalls(renderer);
 
