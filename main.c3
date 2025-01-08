@@ -141,12 +141,12 @@ fn void Player.drawRays(Player* p, Renderer* renderer) {
     if (distV < distH) {
       ray = { vx, vy };
       finalDist = distV;
-      sdl::setRenderDrawColor(renderer, (char)(20 + 50 * (distV / HEIGHT)), 0, 0, 255);
+      sdl::setRenderDrawColor(renderer, 0, 50, 50, 255);
     }
     if (distH < distV) {
       ray = { hx, hy };
       finalDist = distH;
-      sdl::setRenderDrawColor(renderer, (char)(150 + 100 * (distV / WIDTH)), 0, 0, 255);
+      sdl::setRenderDrawColor(renderer, 0, 230, 230, 255);
     }
 
     if (finalDist == 0) finalDist = 0.0001;
@@ -268,7 +268,7 @@ fn void main() {
   player.dir = { x, y };
 
   while (running) {
-    sdl::setRenderDrawColor(renderer, 0, 0, 0, 255);
+    sdl::setRenderDrawColor(renderer, 18, 18, 18, 255);
     sdl::renderClear(renderer);
 
     pollEvents();
