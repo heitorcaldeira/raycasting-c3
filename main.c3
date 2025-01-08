@@ -45,18 +45,19 @@ fn float distance(Vec2 a, Vec2 b) {
 }
 
 fn void Player.drawRays(Player* p, Renderer* renderer) {
+  sdl::renderSetScale(renderer, 1, 1);
   Vec2 ray, offset;
   float rayAngle, iRay, mp, finalDist;
   int maxRays;
   Vec2 l = p.dir;
 
-  rayAngle = p.fov - degToRad(15);
+  rayAngle = p.fov - degToRad(30);
   if (rayAngle < 0) rayAngle += math::PI * 2;
 
   if (rayAngle > math::PI * 2) rayAngle -= math::PI * 2;
   maxRays = (int)math::max(COLS_COUNT, ROWS_COUNT);
 
-  for (int r = 0; r < 60; r++) {
+  for (int r = 0; r < 100; r++) {
     iRay = 0;
     float distV = 100000000;
     float vx = p.pos.x;
@@ -140,12 +141,12 @@ fn void Player.drawRays(Player* p, Renderer* renderer) {
     if (distV < distH) {
       ray = { vx, vy };
       finalDist = distV;
-      sdl::setRenderDrawColor(renderer, 50, 0, 0, 255);
+      sdl::setRenderDrawColor(renderer, (char)(20 + 50 * (distV / HEIGHT)), 0, 0, 255);
     }
     if (distH < distV) {
       ray = { hx, hy };
       finalDist = distH;
-      sdl::setRenderDrawColor(renderer, 255, 0, 0, 255);
+      sdl::setRenderDrawColor(renderer, (char)(150 + 100 * (distV / WIDTH)), 0, 0, 255);
     }
 
     if (finalDist == 0) finalDist = 0.0001;
@@ -153,15 +154,19 @@ fn void Player.drawRays(Player* p, Renderer* renderer) {
     if (ca < 0) ca += math::PI * 2;
     if (ca > math::PI * 2) ca -= math::PI * 2;
     finalDist = finalDist * math::cos(ca);
-    float lineHeigth = (MAP_SIZE * 800) / finalDist;
+    float lineHeigth = (MAP_SIZE * HEIGHT) / finalDist;
     float lineOffset = 300 - lineHeigth / 2;
     if (lineHeigth > 300) lineHeigth = 300;
 
+    sdl::renderFillRectF(
+        renderer,
+        &&FRect{ (float)r * WIDTH / 100, lineOffset, WIDTH / 100, lineHeigth }
+        );
     sdl::renderDrawLineF(
         renderer,
-        (float)r * 2 + 400,
+        (float)r * WIDTH / 100,
         lineOffset,
-        (float)r * 2 + 400,
+        (float)r * WIDTH / 100,
         lineHeigth + lineOffset
         );
 
@@ -198,6 +203,7 @@ fn void drawWalls(Renderer* renderer) {
 
 fn void gameLoop(Renderer* renderer) {
   sdl::setRenderDrawColor(renderer, 18, 18, 18, 255);
+  sdl::renderSetScale(renderer, 0.3, 0.3);
 
   for (int row = 0; row <= ROWS_COUNT; row++) {
     sdl::renderDrawLine(renderer, 0, row * CELL_SIZE, WIDTH, row * CELL_SIZE);
